@@ -91,7 +91,7 @@ print(ltc_payment_link)  # ✅ Debug the Coinbase API response
 if ltc_payment_link and "hosted_url" in ltc_payment_link:
 
         await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {ltc_payment_link}")
-    else:
+        else:
         await ctx.send("❌ Failed to generate LTC payment link. Please try again later!")
 
 
