@@ -63,7 +63,11 @@ def create_coinbase_charge(amount_usd, user_id):
         "description": "Deposit to Shulker Gambling Bot",
         "pricing_type": "fixed_price",
         "local_price": {"amount": amount_usd, "currency": "USD"},
-        "metadata": {"ltc_address": LTC_ADDRESS}
+        "metadata": {
+    "ltc_address": LTC_ADDRESS,
+    "user_id": user_id  # ✅ Fixed here
+}
+
     }
 
     response = requests.post(url, json=data, headers=headers)
@@ -86,6 +90,7 @@ async def deposit(ctx, amount: int):
         await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {ltc_payment_link}")
     else:
         await ctx.send("❌ Failed to generate LTC payment link. Please try again later!")
+
 
 
 
