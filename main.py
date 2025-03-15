@@ -22,7 +22,12 @@ async def on_message(message):
     if message.author == bot.user:
         return
     
-    await bot.process_commands(message)
+    # Fix for Other Commands
+    if message.content.startswith("."):
+        await bot.process_commands(message)
+
+    # Add your custom responses here (if needed)
+
 
 
 # Balance Functions...
