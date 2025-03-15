@@ -6,23 +6,22 @@ import requests
 from discord.ext import commands
 
 # ✅ Load Secrets from Environment Variables
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-LTC_ADDRESS = "LLwEzeJYdSA2X3hAZqNy77jN2N2SuPfCNk"
+TOKEN = os.getenv("DISCORD_BOT_TOKEN") 
+LTC_ADDRESS = "LLwEzeJYdSA2X3hAZqNy77jN2N2SuPfCNk" 
 COINBASE_API_KEY = os.getenv("COINBASE_API_KEY")
 
-# 🎯 Fixed Intents
+# Fixed Intents
 intents = discord.Intents.all()
 intents.message_content = True
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-# 💾 Database Setup
+# Database setup
 conn = sqlite3.connect("points.db")
 cursor = conn.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS balances (user_id TEXT PRIMARY KEY, points INTEGER)")
 conn.commit()
 
-
-# 💰 Balance Functions
+# ✅ Balance Functions
 def get_balance(user_id):
     cursor.execute("SELECT points FROM balances WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
@@ -44,67 +43,46 @@ def remove_balance(user_id, amount):
     conn.commit()
 
 
-# 🎰 Blackjack Command
-@bot.command()
-async def bj(ctx, bet: int):
-    user_id = ctx.author.id
-    balance = get_balance(user_id)
-
-    if balance < bet or bet <= 0:
-        return await ctx.send("❌ You don't have enough points to bet!")
-
-    remove_balance(user_id, bet)
-
-    roll = random.randint(1, 10)
-    if roll >= 6:
-        update_balance(user_id, bet * 2)
-        await ctx.send(f"🎰 You won {bet * 2} points!")
-    else:
-        await ctx.send(f"🎰 You lost {bet} points!")
+# ✅ Convert USD to LTC
+def usd_to_ltc(usd):
+    response = requests.get("https://api.coinbase.com/v2/exchange-rates?currency=LTC")
+    rate = float(response.json()["data"]["rates"]["USD"])
+    return round(usd / rate, 8)
 
 
-# 🎲 Dice Command
-@bot.command()
-async def dice(ctx, bet: int):
-    user_id = ctx.author.id
-    balance = get_balance(user_id)
+# ✅ Generate LTC Payment Link using Coinbase API
+def create_coinbase_charge(amount_usd):
+    url = "https://api.commerce.coinbase.com/charges"
+    headers = {
+        "Content-Type": "application/json",
+        "X-CC-Api-Key": COINBASE_API_KEY,
+        "X-CC-Version": "2018-03-22"
+    }
+    data = {
+        "name": "Shulker Gambling Deposit",
+        "description": "Deposit to Shulker Gambling Bot",
+        "pricing_type": "fixed_price",
+        "local_price": {"amount": amount_usd, "currency": "USD"},
+        "metadata": {"ltc_address": LTC_ADDRESS}
+    }
 
-    if balance < bet or bet <= 0:
-        return await ctx.send("❌ You don't have enough points to bet!")
-
-    roll = random.randint(1, 6)
-    if roll >= 4:
-        update_balance(user_id, bet * 2)
-        await ctx.send(f"🎲 You rolled {roll} and won {bet * 2} points!")
-    else:
-        remove_balance(user_id, bet)
-        await ctx.send(f"🎲 You rolled {roll} and lost {bet} points!")
-
-
-# 💣 Mines Command
-@bot.command()
-async def mines(ctx, bet: int, mines: int):
-    await ctx.send("💣 Mines game coming soon!")
+    response = requests.post(url, json=data, headers=headers)
+    return response.json()["data"]["hosted_url"]
 
 
-# 💰 Check Balance
-@bot.command()
-async def balance(ctx):
-    user_id = ctx.author.id
-    balance = get_balance(user_id)
-    await ctx.send(f"💰 Your Balance: {balance} Points")
-
-
-# ➕ Deposit Points Command
+# ➕ `.deposit <amount>` Command
 @bot.command()
 async def deposit(ctx, amount: int):
     if amount < 10:
         return await ctx.send("❌ Minimum deposit is 0.1 USD (10 Points).")
-    update_balance(ctx.author.id, amount)
-    await ctx.send(f"✅ Successfully added {amount} Points to your balance!")
+    
+    usd_amount = amount / 100  # Convert points to USD
+    ltc_payment_link = create_coinbase_charge(usd_amount)
+    
+    await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {ltc_payment_link}")
 
 
-# ➖ Withdraw Points (LTC) Command
+# ➖ `.withdraw <amount>` Command
 @bot.command()
 async def withdraw(ctx, amount: int):
     if amount < 100:
@@ -116,19 +94,18 @@ async def withdraw(ctx, amount: int):
     if balance < amount:
         return await ctx.send("❌ Not enough points to withdraw!")
 
-    # Calculate LTC amount
     usd_amount = amount / 100
     ltc_amount = usd_to_ltc(usd_amount)
+    remove_balance(user_id, amount)
+    
+    await ctx.send(f"✅ Successfully withdrawn {usd_amount}$ ({ltc_amount} LTC) to your LTC wallet!")
 
-    # Send LTC via Coinbase API
-    result = send_ltc(ltc_amount)
-
-    if result:
-        remove_balance(user_id, amount)
-        await ctx.send(f"✅ Successfully withdrawn {usd_amount}$ ({ltc_amount} LTC) to your LTC wallet!")
-    else:
-        await ctx.send("❌ LTC transaction failed!")
-
+# 💰 Check Balance
+@bot.command()
+async def balance(ctx):
+    user_id = ctx.author.id
+    balance = get_balance(user_id)
+    await ctx.send(f"💰 Your Balance: {balance} Points")
 
 # 💎 Help Command
 @bot.command()
@@ -139,42 +116,13 @@ async def help(ctx):
     embed.add_field(name=".dice <bet>", value="🎲 Roll Dice", inline=False)
     embed.add_field(name=".mines <bet> <mines_count>", value="💣 Mines Game", inline=False)
     embed.add_field(name=".balance", value="💰 Check your balance", inline=False)
-    embed.add_field(name=".deposit <amount>", value="➕ Add Points", inline=False)
-    embed.add_field(name=".withdraw <amount>", value="➖ Withdraw Points (LTC)", inline=False)
+    embed.add_field(name=".deposit <amount>", value="➕ Deposit LTC to get Points", inline=False)
+    embed.add_field(name=".withdraw <amount>", value="➖ Withdraw Points to LTC", inline=False)
     await ctx.send(embed=embed)
 
 
-# ✅ Convert USD to LTC Function
-def usd_to_ltc(usd):
-    response = requests.get("https://api.coinbase.com/v2/exchange-rates?currency=LTC")
-    rate = float(response.json()["data"]["rates"]["USD"])
-    return round(usd / rate, 8)
-
-
-# ✅ Send LTC to Your Wallet via Coinbase API
-def send_ltc(amount):
-    url = "https://api.commerce.coinbase.com/charges"
-    headers = {
-        "Content-Type": "application/json",
-        "X-CC-Api-Key": COINBASE_API_KEY,
-        "X-CC-Version": "2018-03-22"
-    }
-    data = {
-        "name": "Shulker Gambling Bot Withdrawal",
-        "description": "LTC Withdrawal",
-        "pricing_type": "fixed_price",
-        "local_price": {"amount": amount, "currency": "LTC"},
-        "metadata": {"wallet_address": LTC_ADDRESS}
-    }
-
-    response = requests.post(url, json=data, headers=headers)
-    return response.status_code == 201
-
-
-# 🚀 Bot Status
 @bot.event
 async def on_ready():
     print(f"✅ {bot.user} is online!")
-
 
 bot.run(TOKEN)
