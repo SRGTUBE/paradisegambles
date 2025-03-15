@@ -124,6 +124,83 @@ class BlackjackButton(discord.ui.View):
         else:
             update_balance(self.player.id, self.bet)  
 
+@bot.command()
+async def help(ctx):
+    embed = discord.Embed(title="💎 Shulker Gambling Bot Commands", color=discord.Color.purple())
+    embed.add_field(name=".bj <bet>", value="🎰 Play Blackjack", inline=False)
+    embed.add_field(name=".cf <bet> <heads/tails>", value="🪙 Coinflip", inline=False)
+    embed.add_field(name=".dice <bet>", value="🎲 Roll Dice", inline=False)
+    embed.add_field(name=".mines <bet> <mines_count>", value="💣 Mines Game", inline=False)
+    embed.add_field(name=".balance", value="💰 Check your balance", inline=False)
+    embed.add_field(name=".deposit <amount>", value="➕ Add Points", inline=False)
+    embed.add_field(name=".withdraw <amount>", value="➖ Remove Points", inline=False)
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def cf(ctx, bet: int, choice: str):
+    if choice not in ["heads", "tails"]:
+        return await ctx.send("❌ Invalid choice! Choose either `heads` or `tails`.")
+
+    user_id = ctx.author.id
+    balance = get_balance(user_id)
+
+    if balance < bet or bet <= 0:
+        return await ctx.send("❌ You don't have enough points to bet!")
+
+    remove_balance(user_id, bet)
+    
+    result = random.choice(["heads", "tails"])
+    
+    if result == choice:
+        update_balance(user_id, bet * 2)
+        await ctx.send(f"✅ You won! 🎉 ({result})")
+    else:
+        await ctx.send(f"❌ You lost! 😢 ({result})")
+
+
+@bot.command()
+async def dice(ctx, bet: int):
+    user_id = ctx.author.id
+    balance = get_balance(user_id)
+
+    if balance < bet or bet <= 0:
+        return await ctx.send("❌ You don't have enough points to bet!")
+
+    remove_balance(user_id, bet)
+    
+    roll = random.randint(1, 6)
+
+    if roll >= 4:
+        update_balance(user_id, bet * 2)
+        await ctx.send(f"🎲 You rolled `{roll}`! ✅ You won!")
+    else:
+        await ctx.send(f"🎲 You rolled `{roll}`! ❌ You lost!")
+
+
+@bot.command()
+async def mines(ctx, bet: int, mines: int):
+    user_id = ctx.author.id
+    balance = get_balance(user_id)
+
+    if balance < bet or bet <= 0:
+        return await ctx.send("❌ You don't have enough points to bet!")
+
+    if mines < 1 or mines > 24:
+        return await ctx.send("❌ You can only select between `1 to 24` mines.")
+
+    remove_balance(user_id, bet)
+
+    safe_tiles = 25 - mines
+    chance = safe_tiles / 25
+
+    if random.random() <= chance:
+        win_amount = int(bet * (1 + (mines * 0.3)))
+        update_balance(user_id, win_amount)
+        await ctx.send(f"💣 You survived the mines and won `{win_amount} Points`! 🎉")
+    else:
+        await ctx.send("❌ You hit a mine and lost your bet! 💀")
 
 @bot.command()
 async def bj(ctx, bet: int):
