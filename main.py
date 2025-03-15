@@ -74,12 +74,14 @@ def create_coinbase_charge(amount_usd):
 @bot.command()
 async def deposit(ctx, amount: int):
     if amount < 10:
-        return await ctx.send("❌ Minimum deposit is 0.1 USD (10 Points).")
+        await ctx.send("❌ Minimum deposit is 0.1 USD (10 Points).")
+        return
     
     usd_amount = amount / 100  # Convert points to USD
     ltc_payment_link = create_coinbase_charge(usd_amount)
     
     await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {ltc_payment_link}")
+
 
 
 # ➖ `.withdraw <amount>` Command
