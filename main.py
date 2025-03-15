@@ -12,7 +12,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # For reading message content
 
 # Bot
-bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)  # Disable default help command
+bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)  # Disable default help command
 
 # Connect to SQLite database
 conn = sqlite3.connect("points.db")
