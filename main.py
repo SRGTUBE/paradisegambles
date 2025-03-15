@@ -1,6 +1,7 @@
 import discord
-from discord.ext import commands
+import sqlite3
 import os
+from discord.ext import commands
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 LTC_WALLET_ADDRESS = "YOUR_LTC_WALLET_ADDRESS"  # Replace with your LTC wallet address
@@ -8,14 +9,30 @@ OWNER_ID = 123456789012345678  # Replace with your Discord ID
 
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.default())
 
-# Store user balances
-balances = {}
+# Connect to SQLite database
+conn = sqlite3.connect("points.db")
+cursor = conn.cursor()
+cursor.execute("CREATE TABLE IF NOT EXISTS balances (user_id TEXT PRIMARY KEY, points INTEGER)")
+conn.commit()
+
+# Function to get user balance
+def get_balance(user_id):
+    cursor.execute("SELECT points FROM balances WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+    return result[0] if result else 0
+
+# Function to update user balance
+def update_balance(user_id, amount):
+    if get_balance(user_id) == 0:
+        cursor.execute("INSERT INTO balances (user_id, points) VALUES (?, ?)", (user_id, amount))
+    else:
+        cursor.execute("UPDATE balances SET points = points + ? WHERE user_id = ?", (amount, user_id))
+    conn.commit()
 
 # Command to check balance
 @bot.command()
 async def balance(ctx):
-    user_id = str(ctx.author.id)
-    points = balances.get(user_id, 0)
+    points = get_balance(str(ctx.author.id))
     await ctx.send(f"{ctx.author.mention}, you have **{points} points**.")
 
 # Command to deposit (manual confirmation)
@@ -36,10 +53,9 @@ async def deposit(ctx, amount: float):
 async def addpoints(ctx, user: discord.Member, amount: int):
     if ctx.author.id != OWNER_ID:
         return await ctx.send("Only the owner can add points.")
-    
-    user_id = str(user.id)
-    balances[user_id] = balances.get(user_id, 0) + amount
-    await ctx.send(f"Added **{amount} points** to {user.mention}. They now have **{balances[user_id]} points**.")
 
-# Run bot
+    update_balance(str(user.id), amount)
+    new_balance = get_balance(str(user.id))
+    await ctx.send(f"Added **{amount} points** to {user.mention}. They now have **{new_balance} points**.")
+
 bot.run(TOKEN)
