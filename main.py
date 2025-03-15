@@ -82,18 +82,18 @@ async def deposit(ctx, amount: int):
     
     usd_amount = amount / 100  # Convert points to USD
     
-    # Generate LTC Payment Link from Coinbase API
+    # ✅ Generate Coinbase Payment Link
     ltc_payment_link = create_coinbase_charge(usd_amount, ctx.author.id)
 
-    # ✅ Check if the response is valid
-    if ltc_payment_link and "data" in ltc_payment_link:
-        hosted_url = ltc_payment_link["data"].get("hosted_url", None)
-        if hosted_url:
-            await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {hosted_url}")
-        else:
-            await ctx.send("❌ Failed to generate LTC payment link. Please try again later!")
+    # ✅ Check if Coinbase API responded properly
+    if ltc_payment_link:
+        update_balance(ctx.author.id, amount)  # ✅ Add Points to Database
+        
+        await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {ltc_payment_link}")
+    
     else:
         await ctx.send("❌ Coinbase API didn't respond properly!")
+
 
 
 # ➖ `.withdraw <amount>` Command
