@@ -17,6 +17,14 @@ cursor = conn.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS balances (user_id TEXT PRIMARY KEY, points INTEGER)")
 conn.commit()
 
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+    
+    await bot.process_commands(message)
+
+
 # Balance Functions...
 def get_balance(user_id):
     cursor.execute("SELECT points FROM balances WHERE user_id = ?", (user_id,))
