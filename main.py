@@ -6,11 +6,10 @@ from discord.ext import commands
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
-intents = discord.Intents.default()
-intents.message_content = True
+# Fixed Intents
 intents = discord.Intents.all()
+intents.message_content = True
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
-
 
 # Database setup
 conn = sqlite3.connect("points.db")
@@ -18,12 +17,11 @@ cursor = conn.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS balances (user_id TEXT PRIMARY KEY, points INTEGER)")
 conn.commit()
 
-
+# Balance Functions...
 def get_balance(user_id):
     cursor.execute("SELECT points FROM balances WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
     return result[0] if result else 0
-
 
 def update_balance(user_id, amount):
     if get_balance(user_id) == 0:
@@ -31,7 +29,6 @@ def update_balance(user_id, amount):
     else:
         cursor.execute("UPDATE balances SET points = points + ? WHERE user_id = ?", (amount, user_id))
     conn.commit()
-
 
 def remove_balance(user_id, amount):
     current_balance = get_balance(user_id)
@@ -77,7 +74,7 @@ class BlackjackButton(discord.ui.View):
         player_score = self.calculate_score(self.player_hand)
         
         if player_score > 21:
-            await self.end_game(interaction, "You busted! Dealer wins.", False)
+            await self.end_game(interaction, "❌ You Busted! Dealer Wins!", False)
         else:
             await self.update_embed(interaction)
 
@@ -93,11 +90,11 @@ class BlackjackButton(discord.ui.View):
         dealer_score = self.calculate_score(self.dealer_hand)
         
         if dealer_score > 21 or player_score > dealer_score:
-            await self.end_game(interaction, "🎉 Congratulations! You win!", True)
+            await self.end_game(interaction, "🎉 You Win!", True)
         elif player_score < dealer_score:
-            await self.end_game(interaction, "❌ Dealer wins!", False)
+            await self.end_game(interaction, "❌ Dealer Wins!", False)
         else:
-            await self.end_game(interaction, "It's a tie!", None)
+            await self.end_game(interaction, "🤝 It's a Tie!", None)
 
     async def end_game(self, interaction, result, player_won):
         self.clear_items()
@@ -108,11 +105,11 @@ class BlackjackButton(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=None)
 
         if player_won:
-            update_balance(self.player.id, self.bet * 2)  # 🤑 Double Winning Amount
+            update_balance(self.player.id, self.bet * 2)  
         elif player_won is False:
-            remove_balance(self.player.id, self.bet)  # ❌ Loss of Bet Amount
+            remove_balance(self.player.id, self.bet)  
         else:
-            update_balance(self.player.id, self.bet)  # 🤝 Refund on Tie
+            update_balance(self.player.id, self.bet)  
 
 
 @bot.command()
