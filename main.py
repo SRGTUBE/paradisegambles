@@ -62,15 +62,15 @@ def create_coinbase_charge(amount_usd, user_id):
         "name": "Shulker Gambling Deposit",
         "description": "Deposit to Shulker Gambling Bot",
         "pricing_type": "fixed_price",
-        "local_price": {"amount": amount_usd, "currency": "USD"},
+        "local_price": {"amount": str(amount_usd), "currency": "USD"},
         "metadata": {
             "ltc_address": LTC_ADDRESS,
-            "user_id": user_id  
+            "user_id": str(user_id)
         }
     }
 
     response = requests.post(url, json=data, headers=headers)
-    return response.json()["data"].get("hosted_url")
+    return response.json()
 
 
 # ➕ `.deposit <amount>` Command
@@ -85,9 +85,6 @@ async def deposit(ctx, amount: int):
     # Generate LTC Payment Link from Coinbase API
     ltc_payment_link = create_coinbase_charge(usd_amount, ctx.author.id)
 
-    # ✅ Debug the actual API response first!
-    print(ltc_payment_link)
-
     # ✅ Check if the response is valid
     if ltc_payment_link and "data" in ltc_payment_link:
         hosted_url = ltc_payment_link["data"].get("hosted_url", None)
@@ -97,7 +94,6 @@ async def deposit(ctx, amount: int):
             await ctx.send("❌ Failed to generate LTC payment link. Please try again later!")
     else:
         await ctx.send("❌ Coinbase API didn't respond properly!")
-
 
 
 # ➖ `.withdraw <amount>` Command
@@ -146,5 +142,4 @@ async def on_ready():
     print(f"✅ {bot.user} is online!")
 
 
-# ✅ Run the Bot
 bot.run(TOKEN)
