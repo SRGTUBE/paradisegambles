@@ -64,14 +64,13 @@ def create_coinbase_charge(amount_usd, user_id):
         "pricing_type": "fixed_price",
         "local_price": {"amount": amount_usd, "currency": "USD"},
         "metadata": {
-    "ltc_address": LTC_ADDRESS,
-    "user_id": user_id  # ✅ Fixed here
-}
-
+            "ltc_address": LTC_ADDRESS,
+            "user_id": user_id  
+        }
     }
 
     response = requests.post(url, json=data, headers=headers)
-    return response.json()["data"]["hosted_url"]
+    return response.json()["data"].get("hosted_url")
 
 
 # ➕ `.deposit <amount>` Command
@@ -86,16 +85,10 @@ async def deposit(ctx, amount: int):
     # Generate LTC Payment Link from Coinbase API
     ltc_payment_link = create_coinbase_charge(usd_amount, ctx.author.id)
 
-print(ltc_payment_link)  # ✅ Debug the Coinbase API response
-
-if ltc_payment_link and "hosted_url" in ltc_payment_link:
-
+    if ltc_payment_link:
         await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {ltc_payment_link}")
-        else:
+    else:
         await ctx.send("❌ Failed to generate LTC payment link. Please try again later!")
-
-
-
 
 
 # ➖ `.withdraw <amount>` Command
@@ -116,12 +109,14 @@ async def withdraw(ctx, amount: int):
     
     await ctx.send(f"✅ Successfully withdrawn {usd_amount}$ ({ltc_amount} LTC) to your LTC wallet!")
 
+
 # 💰 Check Balance
 @bot.command()
 async def balance(ctx):
     user_id = ctx.author.id
     balance = get_balance(user_id)
     await ctx.send(f"💰 Your Balance: {balance} Points")
+
 
 # 💎 Help Command
 @bot.command()
@@ -141,4 +136,6 @@ async def help(ctx):
 async def on_ready():
     print(f"✅ {bot.user} is online!")
 
+
+# ✅ Run the Bot
 bot.run(TOKEN)
