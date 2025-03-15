@@ -29,6 +29,14 @@ def update_balance(user_id, amount):
         cursor.execute("UPDATE balances SET points = points + ? WHERE user_id = ?", (amount, user_id))
     conn.commit()
 
+# Function to remove points
+def remove_balance(user_id, amount):
+    current_balance = get_balance(user_id)
+    new_balance = max(0, current_balance - amount)  # Prevent negative balances
+    cursor.execute("UPDATE balances SET points = ? WHERE user_id = ?", (new_balance, user_id))
+    conn.commit()
+    return new_balance
+
 # Command to check balance
 @bot.command()
 async def balance(ctx):
@@ -57,5 +65,30 @@ async def addpoints(ctx, user: discord.Member, amount: int):
     update_balance(str(user.id), amount)
     new_balance = get_balance(str(user.id))
     await ctx.send(f"Added **{amount} points** to {user.mention}. They now have **{new_balance} points**.")
+
+# Admin command to manually remove points
+@bot.command()
+async def removepoints(ctx, user: discord.Member, amount: int):
+    if ctx.author.id != OWNER_ID:
+        return await ctx.send("Only the owner can remove points.")
+
+    new_balance = remove_balance(str(user.id), amount)
+    await ctx.send(f"Removed **{amount} points** from {user.mention}. They now have **{new_balance} points**.")
+
+# Command to show the top 10 users with the highest points
+@bot.command()
+async def leaderboard(ctx):
+    cursor.execute("SELECT user_id, points FROM balances ORDER BY points DESC LIMIT 10")
+    top_users = cursor.fetchall()
+
+    if not top_users:
+        return await ctx.send("No leaderboard data available.")
+
+    leaderboard_text = "**🏆 Leaderboard 🏆**\n"
+    for rank, (user_id, points) in enumerate(top_users, start=1):
+        user = await bot.fetch_user(int(user_id))
+        leaderboard_text += f"**{rank}.** {user.mention} → **{points} points**\n"
+
+    await ctx.send(leaderboard_text)
 
 bot.run(TOKEN)
