@@ -85,13 +85,18 @@ async def deposit(ctx, amount: int):
     # Generate LTC Payment Link from Coinbase API
     ltc_payment_link = create_coinbase_charge(usd_amount, ctx.author.id)
 
-    # ✅ Fixed Handling Here
-    if ltc_payment_link:
-        hosted_url = ltc_payment_link.get("hosted_url", None)
+    # ✅ Debug the actual API response first!
+    print(ltc_payment_link)
+
+    # ✅ Check if the response is valid
+    if ltc_payment_link and "data" in ltc_payment_link:
+        hosted_url = ltc_payment_link["data"].get("hosted_url", None)
         if hosted_url:
             await ctx.send(f"✅ **Deposit {usd_amount}$ worth of LTC to earn {amount} Points!**\n\n**Payment Link:** {hosted_url}")
         else:
             await ctx.send("❌ Failed to generate LTC payment link. Please try again later!")
+    else:
+        await ctx.send("❌ Coinbase API didn't respond properly!")
 
 
 
