@@ -1,22 +1,16 @@
 import discord
 import sqlite3
-import os
 import random
+import os
 from discord.ext import commands
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-LTC_WALLET_ADDRESS = "LLwEzeJYdSA2X3hAZqNy77jN2N2SuPfCNkS"
-OWNER_ID = 1101467683083530331
-
-# LTC Price (Fixed for now, can be updated via API later)
-LTC_PRICE = 80  
 
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-# Database connection
+# Database setup
 conn = sqlite3.connect("points.db")
 cursor = conn.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS balances (user_id TEXT PRIMARY KEY, points INTEGER)")
@@ -42,155 +36,105 @@ def remove_balance(user_id, amount):
     new_balance = max(0, current_balance - amount)
     cursor.execute("UPDATE balances SET points = ? WHERE user_id = ?", (new_balance, user_id))
     conn.commit()
-    return new_balance
+
+
+# 🎰 Blackjack Button Class
+class BlackjackButton(discord.ui.View):
+    def __init__(self, player, bet):
+        super().__init__()
+        self.player = player
+        self.bet = bet
+        self.deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11] * 4
+        random.shuffle(self.deck)
+        self.player_hand = [self.draw_card(), self.draw_card()]
+        self.dealer_hand = [self.draw_card(), self.draw_card()]
+
+    def draw_card(self):
+        return self.deck.pop()
+
+    def calculate_score(self, hand):
+        score = sum(hand)
+        aces = hand.count(11)
+        while score > 21 and aces:
+            score -= 10
+            aces -= 1
+        return score
+
+    async def update_embed(self, interaction):
+        embed = discord.Embed(title=f"🃏 Blackjack - {self.player.name}", color=discord.Color.gold())
+        embed.add_field(name="Your Hand", value=f"{self.player_hand} (Total: {self.calculate_score(self.player_hand)})", inline=False)
+        embed.add_field(name="Dealer's Hand", value=f"[{self.dealer_hand[0]}, ?]", inline=False)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Hit", style=discord.ButtonStyle.green)
+    async def hit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.player:
+            return await interaction.response.send_message("You are not playing this game!", ephemeral=True)
+        
+        self.player_hand.append(self.draw_card())
+        player_score = self.calculate_score(self.player_hand)
+        
+        if player_score > 21:
+            await self.end_game(interaction, "You busted! Dealer wins.", False)
+        else:
+            await self.update_embed(interaction)
+
+    @discord.ui.button(label="Stand", style=discord.ButtonStyle.red)
+    async def stand(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.player:
+            return await interaction.response.send_message("You are not playing this game!", ephemeral=True)
+        
+        while self.calculate_score(self.dealer_hand) < 17:
+            self.dealer_hand.append(self.draw_card())
+        
+        player_score = self.calculate_score(self.player_hand)
+        dealer_score = self.calculate_score(self.dealer_hand)
+        
+        if dealer_score > 21 or player_score > dealer_score:
+            await self.end_game(interaction, "🎉 Congratulations! You win!", True)
+        elif player_score < dealer_score:
+            await self.end_game(interaction, "❌ Dealer wins!", False)
+        else:
+            await self.end_game(interaction, "It's a tie!", None)
+
+    async def end_game(self, interaction, result, player_won):
+        self.clear_items()
+        embed = discord.Embed(title=f"🃏 Blackjack - {self.player.name}", color=discord.Color.gold())
+        embed.add_field(name="Your Hand", value=f"{self.player_hand} (Total: {self.calculate_score(self.player_hand)})", inline=False)
+        embed.add_field(name="Dealer's Hand", value=f"{self.dealer_hand} (Total: {self.calculate_score(self.dealer_hand)})", inline=False)
+        embed.add_field(name="Result", value=result, inline=False)
+        await interaction.response.edit_message(embed=embed, view=None)
+
+        if player_won:
+            update_balance(self.player.id, self.bet * 2)  # 🤑 Double Winning Amount
+        elif player_won is False:
+            remove_balance(self.player.id, self.bet)  # ❌ Loss of Bet Amount
+        else:
+            update_balance(self.player.id, self.bet)  # 🤝 Refund on Tie
+
+
+@bot.command()
+async def bj(ctx, bet: int):
+    user_id = ctx.author.id
+    balance = get_balance(user_id)
+
+    if balance < bet or bet <= 0:
+        return await ctx.send("❌ You don't have enough points to bet!")
+
+    # Deduct bet from user's balance
+    remove_balance(user_id, bet)
+
+    # Start Blackjack Game
+    view = BlackjackButton(ctx.author, bet)
+    embed = discord.Embed(title=f"🃏 Blackjack - {ctx.author.name}", color=discord.Color.gold())
+    embed.add_field(name="Your Hand", value=f"{view.player_hand} (Total: {view.calculate_score(view.player_hand)})", inline=False)
+    embed.add_field(name="Dealer's Hand", value=f"[{view.dealer_hand[0]}, ?]", inline=False)
+    await ctx.send(embed=embed, view=view)
 
 
 @bot.event
 async def on_ready():
     print(f"✅ {bot.user} is online!")
-
-
-@bot.command()
-async def balance(ctx):
-    points = get_balance(str(ctx.author.id))
-    await ctx.send(f"{ctx.author.mention}, you have **{points} points**.")
-
-
-@bot.command()
-async def addpoints(ctx, user: discord.Member, amount: int):
-    if ctx.author.id != OWNER_ID:
-        return await ctx.send("Only the owner can add points.")
-    update_balance(str(user.id), amount)
-    await ctx.send(f"Added **{amount} points** to {user.mention}.")
-
-
-@bot.command()
-async def removepoints(ctx, user: discord.Member, amount: int):
-    if ctx.author.id != OWNER_ID:
-        return await ctx.send("Only the owner can remove points.")
-    new_balance = remove_balance(str(user.id), amount)
-    await ctx.send(f"Removed **{amount} points** from {user.mention}. New balance: **{new_balance} points**.")
-
-
-@bot.command()
-async def leaderboard(ctx):
-    cursor.execute("SELECT user_id, points FROM balances ORDER BY points DESC LIMIT 10")
-    top_users = cursor.fetchall()
-    if not top_users:
-        return await ctx.send("No leaderboard data available.")
-    leaderboard_text = "**🏆 Leaderboard 🏆**\n"
-    for rank, (user_id, points) in enumerate(top_users, start=1):
-        user = await bot.fetch_user(int(user_id))
-        leaderboard_text += f"**{rank}.** {user.mention} → **{points} points**\n"
-    await ctx.send(leaderboard_text)
-
-
-# 🎲 Dice Game
-@bot.command()
-async def dice(ctx, bet: int):
-    balance = get_balance(str(ctx.author.id))
-    if bet > balance:
-        return await ctx.send("You don't have enough points to bet.")
-    
-    roll = random.randint(1, 6)
-    if roll >= 4:
-        update_balance(str(ctx.author.id), bet)
-        await ctx.send(f"🎲 You rolled a {roll}! You won **{bet} points**!")
-    else:
-        remove_balance(str(ctx.author.id), bet)
-        await ctx.send(f"🎲 You rolled a {roll}. You lost **{bet} points**.")
-
-
-# 🃏 Blackjack (Simple)
-@bot.command()
-async def bj(ctx, bet: int):
-    balance = get_balance(str(ctx.author.id))
-    if bet > balance:
-        return await ctx.send("You don't have enough points to bet.")
-    
-    player = random.randint(15, 21)
-    dealer = random.randint(17, 23)
-    
-    if player > 21:
-        remove_balance(str(ctx.author.id), bet)
-        await ctx.send(f"🃏 You busted with {player}. Dealer had {dealer}. You lost **{bet} points**.")
-    elif dealer > 21 or player > dealer:
-        update_balance(str(ctx.author.id), bet)
-        await ctx.send(f"🃏 You had {player}. Dealer had {dealer}. You won **{bet} points**!")
-    else:
-        remove_balance(str(ctx.author.id), bet)
-        await ctx.send(f"🃏 You had {player}. Dealer had {dealer}. You lost **{bet} points**.")
-
-
-# 💣 Mines (Simple)
-@bot.command()
-async def mines(ctx, bet: int, mines: int):
-    balance = get_balance(str(ctx.author.id))
-    if bet > balance:
-        return await ctx.send("You don't have enough points to bet.")
-    if mines < 1 or mines > 24:
-        return await ctx.send("Mines must be between 1 and 24.")
-
-    safe_tiles = 25 - mines
-    chance = random.randint(1, 25)
-
-    if chance <= safe_tiles:
-        winnings = int(bet * (25 / safe_tiles))
-        update_balance(str(ctx.author.id), winnings)
-        await ctx.send(f"💣 You avoided the mines and won **{winnings} points**!")
-    else:
-        remove_balance(str(ctx.author.id), bet)
-        await ctx.send(f"💣 You hit a mine and lost **{bet} points**!")
-
-
-# ✅ Deposit Command (Minimum 0.1$)
-@bot.command()
-async def deposit(ctx, amount: float):
-    if amount < 0.1:
-        return await ctx.send("Minimum deposit is **0.1$**.")
-    
-    ltc_amount = amount / LTC_PRICE
-    await ctx.send(
-        f"{ctx.author.mention}, send **{ltc_amount:.6f} LTC** to this address:\n"
-        f"```{LTC_WALLET_ADDRESS}```\n"
-        "After sending, notify the owner for confirmation."
-    )
-
-
-# ✅ Withdrawal Command (Minimum 1$)
-@bot.command()
-async def withdraw(ctx, amount: float, ltc_address: str):
-    if amount < 1:
-        return await ctx.send("Minimum withdrawal is **1$**.")
-    
-    points_required = int(amount * 100)
-    balance = get_balance(str(ctx.author.id))
-
-    if points_required > balance:
-        return await ctx.send("You don't have enough points.")
-
-    remove_balance(str(ctx.author.id), points_required)
-
-    await ctx.send(
-        f"{ctx.author.mention}, your **{amount}$ (in LTC)** will be sent to this address:\n"
-        f"```{ltc_address}```\n"
-        "The owner will manually process the withdrawal."
-    )
-
-
-# ✅ Custom .help command
-@bot.command()
-async def help(ctx):
-    embed = discord.Embed(title="💎 Gambling Bot Commands", color=discord.Color.blue())
-    embed.add_field(name=".balance", value="Check your points balance.", inline=False)
-    embed.add_field(name=".deposit <amount>", value="Deposit LTC to get points. (Min 0.1$)", inline=False)
-    embed.add_field(name=".withdraw <amount> <LTC address>", value="Withdraw LTC. (Min 1$)", inline=False)
-    embed.add_field(name=".dice <bet>", value="Play Dice game.", inline=False)
-    embed.add_field(name=".bj <bet>", value="Play Blackjack.", inline=False)
-    embed.add_field(name=".mines <bet> <mines>", value="Play Mines.", inline=False)
-    embed.add_field(name=".leaderboard", value="Show top players.", inline=False)
-    embed.set_footer(text="🔗 Made by SHREYANSH GAMETUBE") 
-    await ctx.send(embed=embed)
 
 
 bot.run(TOKEN)
