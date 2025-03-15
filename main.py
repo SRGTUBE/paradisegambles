@@ -4,7 +4,7 @@ import os
 from discord.ext import commands
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-LTC_WALLET_ADDRESS = "YOUR_LTC_WALLET_ADDRESS"  # Replace with your LTC wallet address
+LTC_WALLET_ADDRESS = "LLwEzeJYdSA2X3hAZqNy77jN2N2SuPfCNkS"  # Replace with your LTC wallet address
 OWNER_ID = 123456789012345678  # Replace with your Discord ID
 
 discord.Intents.all()
