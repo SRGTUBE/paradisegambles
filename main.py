@@ -12,7 +12,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # For reading message content
 
 # Bot
-bot = commands.Bot(command_prefix="$", intents=intents)  # Prefix is $
+bot = commands.Bot(command_prefix=".", intents=intents)  # Prefix is $
 
 # Connect to SQLite database
 conn = sqlite3.connect("points.db")
