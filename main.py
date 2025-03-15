@@ -51,7 +51,7 @@ def usd_to_ltc(usd):
 
 
 # ✅ Generate LTC Payment Link using Coinbase API
-def create_coinbase_charge(amount_usd):
+def create_coinbase_charge(amount_usd, user_id):
     url = "https://api.commerce.coinbase.com/charges"
     headers = {
         "Content-Type": "application/json",
