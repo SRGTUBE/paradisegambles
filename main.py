@@ -136,6 +136,29 @@ async def help(ctx):
     embed.add_field(name=".withdraw <amount>", value="➖ Withdraw Points to LTC", inline=False)
     await ctx.send(embed=embed)
 
+ADMIN_IDS = [1101467683083530331, 1106931469928124498]  # ✅ Your Admin IDs Here
+
+# ✅ .setbalance Command (Only Admins)
+@bot.command()
+async def setbalance(ctx, member: discord.Member, amount: int):
+    if ctx.author.id in ADMIN_IDS:
+        cursor.execute("UPDATE balances SET points = ? WHERE user_id = ?", (amount, member.id))
+        conn.commit()
+        await ctx.send(f"✅ Set {member.mention}'s balance to {amount} Points!")
+    else:
+        await ctx.send("❌ Only bot admins can use this command!")
+
+
+# ✅ .addpoints Command (Only Admins)
+@bot.command()
+async def addpoints(ctx, member: discord.Member, amount: int):
+    if ctx.author.id in ADMIN_IDS:
+        update_balance(member.id, amount)
+        await ctx.send(f"✅ Added {amount} Points to {member.mention}!")
+    else:
+        await ctx.send("❌ Only bot admins can use this command!")
+
+
 
 @bot.event
 async def on_ready():
