@@ -126,7 +126,7 @@ async def balance(ctx):
 # 💎 Help Command
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(title="💎 Shulker Gambling Bot Commands", color=discord.Color.gold())
+    embed = discord.Embed(title="💎 Paradise Gambles Bot Commands", color=discord.Color.gold())
     embed.add_field(name=".bj <bet>", value="🎰 Play Blackjack", inline=False)
     embed.add_field(name=".cf <bet> <heads/tails>", value="🪙 Coinflip", inline=False)
     embed.add_field(name=".dice <bet>", value="🎲 Roll Dice", inline=False)
