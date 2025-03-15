@@ -132,6 +132,30 @@ async def bj(ctx, bet: int):
     await ctx.send(embed=embed, view=view)
 
 
+@bot.command()
+async def balance(ctx):
+    user_id = ctx.author.id
+    balance = get_balance(user_id)
+    await ctx.send(f"💰 Your Balance: {balance} Points")
+
+
+@bot.command()
+async def deposit(ctx, amount: int):
+    user_id = ctx.author.id
+    update_balance(user_id, amount)
+    await ctx.send(f"✅ Successfully added {amount} Points to your balance!")
+
+
+@bot.command()
+async def withdraw(ctx, amount: int):
+    user_id = ctx.author.id
+    if get_balance(user_id) < amount:
+        await ctx.send("❌ Not enough points to withdraw!")
+    else:
+        remove_balance(user_id, amount)
+        await ctx.send(f"✅ Successfully withdrawn {amount} Points from your balance!")
+
+
 @bot.event
 async def on_ready():
     print(f"✅ {bot.user} is online!")
