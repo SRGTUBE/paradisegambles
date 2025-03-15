@@ -5,23 +5,24 @@ import os
 import requests
 from discord.ext import commands
 
+# ✅ Load Secrets from Environment Variables
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-LTC_ADDRESS = "YOUR_LTC_WALLET_ADDRESS"  # Your LTC Wallet Address
-COINBASE_API_KEY = "YOUR_COINBASE_API_KEY"  # Coinbase API Key
+LTC_ADDRESS = "LLwEzeJYdSA2X3hAZqNy77jN2N2SuPfCNk"
+COINBASE_API_KEY = os.getenv("COINBASE_API_KEY")
 
-# Fixed Intents
+# 🎯 Fixed Intents
 intents = discord.Intents.all()
 intents.message_content = True
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-# Database setup
+# 💾 Database Setup
 conn = sqlite3.connect("points.db")
 cursor = conn.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS balances (user_id TEXT PRIMARY KEY, points INTEGER)")
 conn.commit()
 
 
-# Balance Functions...
+# 💰 Balance Functions
 def get_balance(user_id):
     cursor.execute("SELECT points FROM balances WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
@@ -94,7 +95,7 @@ async def balance(ctx):
     await ctx.send(f"💰 Your Balance: {balance} Points")
 
 
-# ➕ Deposit Command
+# ➕ Deposit Points Command
 @bot.command()
 async def deposit(ctx, amount: int):
     if amount < 10:
@@ -103,7 +104,7 @@ async def deposit(ctx, amount: int):
     await ctx.send(f"✅ Successfully added {amount} Points to your balance!")
 
 
-# ➖ Withdraw Command (Sends LTC to your LTC wallet)
+# ➖ Withdraw Points (LTC) Command
 @bot.command()
 async def withdraw(ctx, amount: int):
     if amount < 100:
@@ -119,12 +120,12 @@ async def withdraw(ctx, amount: int):
     usd_amount = amount / 100
     ltc_amount = usd_to_ltc(usd_amount)
 
-    # Send LTC to your wallet using Coinbase API
+    # Send LTC via Coinbase API
     result = send_ltc(ltc_amount)
 
     if result:
         remove_balance(user_id, amount)
-        await ctx.send(f"✅ Successfully withdrawn {usd_amount}$ ({ltc_amount} LTC) to your LTC address!")
+        await ctx.send(f"✅ Successfully withdrawn {usd_amount}$ ({ltc_amount} LTC) to your LTC wallet!")
     else:
         await ctx.send("❌ LTC transaction failed!")
 
@@ -143,14 +144,14 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 
-# ✅ Function to Convert USD to LTC
+# ✅ Convert USD to LTC Function
 def usd_to_ltc(usd):
     response = requests.get("https://api.coinbase.com/v2/exchange-rates?currency=LTC")
     rate = float(response.json()["data"]["rates"]["USD"])
     return round(usd / rate, 8)
 
 
-# ✅ Function to Send LTC to Your Wallet via Coinbase API
+# ✅ Send LTC to Your Wallet via Coinbase API
 def send_ltc(amount):
     url = "https://api.commerce.coinbase.com/charges"
     headers = {
@@ -163,8 +164,6 @@ def send_ltc(amount):
         "description": "LTC Withdrawal",
         "pricing_type": "fixed_price",
         "local_price": {"amount": amount, "currency": "LTC"},
-        "redirect_url": "https://discord.gg/shulker",
-        "cancel_url": "https://discord.gg/shulker",
         "metadata": {"wallet_address": LTC_ADDRESS}
     }
 
@@ -172,6 +171,7 @@ def send_ltc(amount):
     return response.status_code == 201
 
 
+# 🚀 Bot Status
 @bot.event
 async def on_ready():
     print(f"✅ {bot.user} is online!")
