@@ -12,7 +12,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # For reading message content
 
 # Bot
-bot = commands.Bot(command_prefix=".", intents=intents)  # Prefix is $
+bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)  # Disable default help command
 
 # Connect to SQLite database
 conn = sqlite3.connect("points.db")
@@ -117,6 +117,20 @@ async def leaderboard(ctx):
     await ctx.send(leaderboard_text)
 
 
+# ✅ Custom $help Command
+@bot.command()
+async def help(ctx):
+    embed = discord.Embed(title="💎 Gambling Bot Commands", color=discord.Color.blue())
+    embed.add_field(name="$balance", value="Check your points balance.", inline=False)
+    embed.add_field(name="$deposit <amount>", value="Deposit LTC and get points.", inline=False)
+    embed.add_field(name="$leaderboard", value="Show top 10 players with highest points.", inline=False)
+    embed.add_field(name="$addpoints <user> <amount>", value="(Owner Only) Add points to a user.", inline=False)
+    embed.add_field(name="$removepoints <user> <amount>", value="(Owner Only) Remove points from a user.", inline=False)
+    embed.add_field(name="$help", value="Show this help menu.", inline=False)
+
+    embed.set_footer(text="🔗 Made by SRG") 
+    await ctx.send(embed=embed)
+
+
 # ✅ Run the bot
 bot.run(TOKEN)
-
