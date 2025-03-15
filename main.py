@@ -134,7 +134,11 @@ async def help(ctx):
     embed.add_field(name=".balance", value="💰 Check your balance", inline=False)
     embed.add_field(name=".deposit <amount>", value="➕ Deposit LTC to get Points", inline=False)
     embed.add_field(name=".withdraw <amount>", value="➖ Withdraw Points to LTC", inline=False)
+    embed.add_field(name=".setbalance <@user> <amount>", value="⚡️ Set User's Balance (Admin Only)", inline=False)
+    embed.add_field(name=".addpoints <@user> <amount>", value="➕ Add Points to User (Admin Only)", inline=False)
+    embed.add_field(name=".leaderboard", value="👑 Show Top 10 Richest Users", inline=False)
     await ctx.send(embed=embed)
+
 
 ADMIN_IDS = [1101467683083530331, 1106931469928124498]  # ✅ Your Admin IDs Here
 
