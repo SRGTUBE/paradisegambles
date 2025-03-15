@@ -5,7 +5,7 @@ from discord.ext import commands
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 LTC_WALLET_ADDRESS = "LLwEzeJYdSA2X3hAZqNy77jN2N2SuPfCNkS"  # Replace with your LTC wallet address
-OWNER_ID = 1106931469928124498  # Replace with your Discord ID
+OWNER_ID = 1101467683083530331  # Replace with your Discord ID
 
 discord.Intents.all()
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.default())
