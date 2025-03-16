@@ -256,16 +256,17 @@ async def balance(ctx):
 async def help(ctx):
     embed = discord.Embed(title="💎 Paradise Gambles Bot Commands", color=discord.Color.gold())
     embed.add_field(name=".bj <bet>", value="🎰 Play Blackjack", inline=False)
-    embed.add_field(name=".cf <bet> <heads/tails>", value="🪙 Coinflip", inline=False)
+    embed.add_field(name=".cf <bet> <choice>", value="🪙 Coinflip", inline=False)
     embed.add_field(name=".dice <bet>", value="🎲 Roll Dice", inline=False)
     embed.add_field(name=".mines <bet> <mines_count>", value="💣 Mines Game", inline=False)
     embed.add_field(name=".balance", value="💰 Check your balance", inline=False)
+    embed.add_field(name=".daily", value="🎁 Claim Daily +2 Points", inline=False)
     embed.add_field(name=".deposit <amount>", value="➕ Deposit LTC to get Points", inline=False)
     embed.add_field(name=".withdraw <amount>", value="➖ Withdraw Points to LTC", inline=False)
-    embed.add_field(name=".setbalance <@user> <amount>", value="⚡️ Set User's Balance (Admin Only)", inline=False)
     embed.add_field(name=".addpoints <@user> <amount>", value="➕ Add Points to User (Admin Only)", inline=False)
-    embed.add_field(name=".leaderboard", value="👑 Show Top 10 Richest Users", inline=False)
+    embed.add_field(name=".removepoints <@user> <amount>", value="➖ Remove Points from User (Admin Only)", inline=False)
     await ctx.send(embed=embed)
+
 
 
 ADMIN_IDS = [1101467683083530331, 1106931469928124498]  # ✅ Your Admin IDs Here
@@ -289,7 +290,41 @@ async def addpoints(ctx, member: discord.Member, amount: int):
     else:
         await ctx.send("❌ Only bot admins can use this command!")
 
+# ✅ Daily Cooldown Table (At the top with other database stuff)
+cursor.execute("CREATE TABLE IF NOT EXISTS daily_cooldown (user_id TEXT PRIMARY KEY, last_claimed INTEGER)")
+conn.commit()
 
+# ✅ .daily Command (Paste Here)
+import time
+
+@bot.command()
+async def daily(ctx):
+    user_id = str(ctx.author.id)
+
+    # ✅ Check if user has claimed before
+    cursor.execute("SELECT last_claimed FROM daily_cooldown WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+    
+    current_time = int(time.time())
+    
+    if result:
+        last_claimed = result[0]
+        cooldown = 86400  # 24 hours in seconds
+        
+        if current_time - last_claimed < cooldown:
+            remaining_time = cooldown - (current_time - last_claimed)
+            hours = remaining_time // 3600
+            minutes = (remaining_time % 3600) // 60
+            return await ctx.send(f"❌ You already claimed your daily reward! ⏳ Try again in **{hours}h {minutes}m**.")
+
+    # ✅ Add 2 Points to Balance
+    update_balance(user_id, 2)
+
+    # ✅ Update Last Claimed Time in Database
+    cursor.execute("INSERT OR REPLACE INTO daily_cooldown (user_id, last_claimed) VALUES (?, ?)", (user_id, current_time))
+    conn.commit()
+    
+    await ctx.send("🎁 **You've claimed your Daily Reward: +2 Points!**")
 
 @bot.event
 async def on_ready():
