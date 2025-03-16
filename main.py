@@ -32,12 +32,15 @@ def get_balance(user_id):
 
 # ✅ Fixed Update Balance Function
 def update_balance(user_id, amount):
-    cursor.execute("INSERT OR REPLACE INTO balances (user_id, points) VALUES (?, ?)", (str(user_id), amount))
+    current_balance = get_balance(user_id)
+
+    if current_balance == 0:
+        cursor.execute("INSERT INTO balances (user_id, points) VALUES (?, ?)", (str(user_id), amount))
+    else:
+        cursor.execute("UPDATE balances SET points = points + ? WHERE user_id = ?", (amount, user_id))
+    
     conn.commit()
 
-else:
-        cursor.execute("UPDATE balances SET points = points + ? WHERE user_id = ?", (amount, user_id))
-    conn.commit()
 
 
 def remove_balance(user_id, amount):
