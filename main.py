@@ -150,22 +150,12 @@ async def help(ctx):
 ADMIN_IDS = [1101467683083530331, 1106931469928124498]  # ✅ Your Admin IDs Here
 
 # ✅ Fixed .setbalance Command
-@bot.command()
-async def setbalance(ctx, member: discord.Member, amount: int):
-    if ctx.author.id not in ADMIN_IDS:  # Removed str()
-        return await ctx.send("❌ You are not authorized to use this command.")
-    
-    update_balance(str(member.id), amount)
-    await ctx.send(f"✅ Set {member.mention}'s balance to {amount} Points!")
-
-
-
 # ✅ .addpoints Command (Only Admins)
 @bot.command()
-async def addpoints(ctx, member: discord.Member, amount: int):
+async def removepoints(ctx, member: discord.Member, amount: int):
     if ctx.author.id in ADMIN_IDS:
-        update_balance(member.id, amount)
-        await ctx.send(f"✅ Added {amount} Points to {member.mention}!")
+        remove_balance(member.id, amount)
+        await ctx.send(f"✅ Removed {amount} Points from {member.mention}!")
     else:
         await ctx.send("❌ Only bot admins can use this command!")
 
