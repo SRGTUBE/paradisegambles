@@ -35,7 +35,7 @@ def update_balance(user_id, amount):
     cursor.execute("INSERT OR REPLACE INTO balances (user_id, points) VALUES (?, ?)", (str(user_id), amount))
     conn.commit()
 
-    else:
+else:
         cursor.execute("UPDATE balances SET points = points + ? WHERE user_id = ?", (amount, user_id))
     conn.commit()
 
