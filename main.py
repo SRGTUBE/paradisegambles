@@ -4,6 +4,7 @@ import random
 import os
 import requests
 from discord.ext import commands
+from discord.ui import View, Button
 
 # ✅ Load Secrets from Environment Variables
 TOKEN = os.getenv("DISCORD_BOT_TOKEN") 
