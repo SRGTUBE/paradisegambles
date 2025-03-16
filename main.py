@@ -22,10 +22,12 @@ cursor.execute("CREATE TABLE IF NOT EXISTS balances (user_id TEXT PRIMARY KEY, p
 conn.commit()
 
 # ✅ Balance Functions
+# ✅ Fixed Get Balance Function
 def get_balance(user_id):
-    cursor.execute("SELECT points FROM balances WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT points FROM balances WHERE user_id = ?", (str(user_id),))  # Convert to string here
     result = cursor.fetchone()
     return result[0] if result else 0
+
 
 
 def update_balance(user_id, amount):
