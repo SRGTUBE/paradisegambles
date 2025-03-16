@@ -30,9 +30,11 @@ def get_balance(user_id):
 
 
 
+# ✅ Fixed Update Balance Function
 def update_balance(user_id, amount):
-    if get_balance(user_id) == 0:
-        cursor.execute("INSERT INTO balances (user_id, points) VALUES (?, ?)", (user_id, amount))
+    cursor.execute("INSERT OR REPLACE INTO balances (user_id, points) VALUES (?, ?)", (str(user_id), amount))
+    conn.commit()
+
     else:
         cursor.execute("UPDATE balances SET points = points + ? WHERE user_id = ?", (amount, user_id))
     conn.commit()
@@ -145,14 +147,14 @@ async def help(ctx):
 ADMIN_IDS = [1101467683083530331, 1106931469928124498]  # ✅ Your Admin IDs Here
 
 # ✅ .setbalance Command (Only Admins)
+# ✅ Set Balance Command (Fixed)
 @bot.command()
 async def setbalance(ctx, member: discord.Member, amount: int):
-    if ctx.author.id in ADMIN_IDS:
-        cursor.execute("UPDATE balances SET points = ? WHERE user_id = ?", (amount, member.id))
-        conn.commit()
-        await ctx.send(f"✅ Set {member.mention}'s balance to {amount} Points!")
-    else:
-        await ctx.send("❌ Only bot admins can use this command!")
+    if str(ctx.author.id) not in ADMIN_IDS:
+        return await ctx.send("❌ You are not authorized to use this command.")
+    
+    update_balance(str(member.id), amount)
+    await ctx.send(f"✅ Set {member.mention}'s balance to {amount} Points!")
 
 
 # ✅ .addpoints Command (Only Admins)
