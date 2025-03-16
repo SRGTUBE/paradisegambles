@@ -149,15 +149,15 @@ async def help(ctx):
 
 ADMIN_IDS = [1101467683083530331, 1106931469928124498]  # ✅ Your Admin IDs Here
 
-# ✅ .setbalance Command (Only Admins)
-# ✅ Set Balance Command (Fixed)
+# ✅ Fixed .setbalance Command
 @bot.command()
 async def setbalance(ctx, member: discord.Member, amount: int):
-    if str(ctx.author.id) not in ADMIN_IDS:
+    if ctx.author.id not in ADMIN_IDS:  # Removed str()
         return await ctx.send("❌ You are not authorized to use this command.")
     
     update_balance(str(member.id), amount)
     await ctx.send(f"✅ Set {member.mention}'s balance to {amount} Points!")
+
 
 
 # ✅ .addpoints Command (Only Admins)
