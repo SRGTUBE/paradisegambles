@@ -198,7 +198,8 @@ class MinesView(View):
         self.revealed.add(tile_index)
 
         if self.grid[tile_index] == "💣":
-            await self.end_game.callback(interaction)
+            await self.end_game(interaction, interaction.user)
+
 
         else:
             self.profit += int(self.bet * 0.5)
