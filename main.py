@@ -152,27 +152,90 @@ async def bj(ctx, bet: int):
 
 #mines
 
+game_state = {}  # ✅ Store Game State for Each User
+
+
+class MinesView(View):
+    def __init__(self, user_id, bet, mines_count, grid):
+        super().__init__(timeout=None)
+        self.user_id = user_id
+        self.bet = bet
+        self.mines_count = mines_count
+        self.grid = grid
+        self.revealed = set()
+        self.profit = 0
+
+        # 🎮 Create 25 Buttons
+        for i in range(25):
+            button = Button(label=str(i + 1), style=discord.ButtonStyle.gray, custom_id=str(i))
+            self.add_item(button)
+
+    async def interaction_check(self, interaction):
+        return interaction.user.id == self.user_id
+
+    async def on_timeout(self):
+        game_state.pop(self.user_id, None)
+
+    @discord.ui.button(label="💰 Cashout", style=discord.ButtonStyle.green, row=5)
+    async def cashout(self, interaction: discord.Interaction, button: Button):
+        update_balance(self.user_id, self.profit)
+        await interaction.response.edit_message(content=f"✅ **You cashed out with {self.profit} Points! 🎰**", view=None)
+        game_state.pop(self.user_id, None)
+
+    @discord.ui.button(label="💥 End Game", style=discord.ButtonStyle.red, row=5)
+    async def end_game(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.edit_message(content="💥 **You hit a mine and lost your bet! ❌**", view=None)
+        game_state.pop(self.user_id, None)
+
+    async def button_callback(self, interaction: discord.Interaction, button: Button):
+        tile_index = int(button.custom_id)
+
+        if tile_index in self.revealed:
+            return await interaction.response.defer()
+
+        self.revealed.add(tile_index)
+
+        if self.grid[tile_index] == "💣":
+            await self.end_game(interaction, button)
+        else:
+            self.profit += int(self.bet * 0.5)
+            button.style = discord.ButtonStyle.green
+            button.label = "💎"
+            await interaction.response.edit_message(content=f"✅ Safe Tile! Current Profit: **{self.profit} Points.**\nPress **Cashout** to collect or continue!", view=self)
+
+
 @bot.command()
-async def mines(ctx, bet: int, mines: int):
-    balance = get_balance(ctx.author.id)
+async def mines(ctx, bet: int, mines_count: int):
+    if bet <= 0 or not (2 <= mines_count <= 24):
+        return await ctx.send("❌ Invalid bet or mines count (2-24).")
+
+    user_id = ctx.author.id
+    balance = get_balance(user_id)
+
     if bet > balance:
-        return await ctx.send("❌ You don't have enough points!")
+        return await ctx.send("❌ You don't have enough points.")
 
-    if not (2 <= mines <= 24):
-        return await ctx.send("❌ Mines must be between 2 and 24!")
+    # 💣 Generate Grid
+    grid = ["💎"] * 25
+    mine_positions = random.sample(range(25), mines_count)
 
-    # 🎮 Random Winning Logic
-    safe_tiles = 25 - mines
-    win_chance = safe_tiles / 25
+    for pos in mine_positions:
+        grid[pos] = "💣"
 
-    if random.random() <= win_chance:
-        profit = round(bet * (1 + (mines / 10)))
-        update_balance(ctx.author.id, profit)
-        await ctx.send(f"💣 **You Survived the Mines! 🎉 Earned +{profit} Points!**")
-    else:
-        remove_balance(ctx.author.id, bet)
-        await ctx.send(f"💣 **You Stepped on a Mine! 💀 Lost -{bet} Points!**")
+    # ✅ Remove Points from User's Balance
+    remove_balance(user_id, bet)
 
+    # 🎮 Store Game State
+    game_state[user_id] = {
+        "grid": grid,
+        "revealed": set(),
+        "bet": bet,
+        "mines_count": mines_count,
+        "profit": 0,
+    }
+
+    view = MinesView(user_id, bet, mines_count, grid)
+    await ctx.send("💣 **Mines Game Started!**\nClick on tiles to reveal. Avoid the mines!", view=view)
 
 #dice
 
