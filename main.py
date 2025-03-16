@@ -165,11 +165,12 @@ class MinesView(View):
         self.revealed = set()
         self.profit = 0
 
-        # 🎮 Create 25 Buttons and add the callback
+        # 🎮 Create 25 Buttons
         for i in range(25):
             button = Button(label=str(i + 1), style=discord.ButtonStyle.gray, custom_id=str(i))
-            button.callback = self.button_callback  # ✅ Fixed here
+            button.callback = self.button_callback  # ✅ Fix Here
             self.add_item(button)
+
 
     async def interaction_check(self, interaction):
         return interaction.user.id == self.user_id
@@ -197,7 +198,8 @@ class MinesView(View):
         self.revealed.add(tile_index)
 
         if self.grid[tile_index] == "💣":
-            await self.end_game(interaction, None)
+            await self.end_game.callback(interaction)
+
         else:
             self.profit += int(self.bet * 0.5)
             button = [item for item in self.children if item.custom_id == str(tile_index)][0]
