@@ -102,6 +102,126 @@ async def deposit(ctx, amount: int):
         await ctx.send("❌ Coinbase API didn't respond properly!")
 
 
+# bj
+@bot.command()
+async def bj(ctx, bet: int):
+    balance = get_balance(ctx.author.id)
+    if bet > balance:
+        return await ctx.send("❌ You don't have enough points!")
+
+    player_hand = random.randint(7, 12)
+    bot_hand = random.randint(14, 21)
+
+    embed = discord.Embed(title="🎰 Blackjack Game", description=f"🃏 Your Cards: `{player_hand}`\n🤖 Bot's Cards: `Hidden`", color=discord.Color.gold())
+    msg = await ctx.send(embed=embed)
+
+    class BlackjackView(View):
+        @discord.ui.button(label="Hit", style=discord.ButtonStyle.green)
+        async def hit(self, interaction: discord.Interaction, button: Button):
+            nonlocal player_hand
+            card = random.randint(1, 11)
+            player_hand += card
+            
+            if player_hand > 21:
+                remove_balance(ctx.author.id, bet)
+                await interaction.response.edit_message(embed=discord.Embed(title="🎰 Blackjack", description=f"💀 You Busted with `{player_hand}` Points! -{bet} Points!", color=discord.Color.red()))
+                self.stop()
+            else:
+                embed.description = f"🃏 Your Cards: `{player_hand}`\n🤖 Bot's Cards: `Hidden`"
+                await interaction.response.edit_message(embed=embed)
+
+        @discord.ui.button(label="Stand", style=discord.ButtonStyle.red)
+        async def stand(self, interaction: discord.Interaction, button: Button):
+            nonlocal bot_hand
+            if player_hand > bot_hand or bot_hand > 21:
+                update_balance(ctx.author.id, bet)
+                result = f"🎉 You Won! (+{bet} Points)"
+            elif player_hand < bot_hand:
+                remove_balance(ctx.author.id, bet)
+                result = f"💀 You Lost! (-{bet} Points)"
+            else:
+                result = f"🤝 It's a Tie!"
+
+            final_embed = discord.Embed(title="🎰 Blackjack", description=f"🃏 Your Cards: `{player_hand}`\n🤖 Bot's Cards: `{bot_hand}`\n\n{result}", color=discord.Color.gold())
+            await interaction.response.edit_message(embed=final_embed)
+            self.stop()
+
+    view = BlackjackView()
+    await msg.edit(view=view)
+
+#mines
+
+@bot.command()
+async def mines(ctx, bet: int, mines: int):
+    balance = get_balance(ctx.author.id)
+    if bet > balance:
+        return await ctx.send("❌ You don't have enough points!")
+
+    if not (2 <= mines <= 24):
+        return await ctx.send("❌ Mines must be between 2 and 24!")
+
+    # 🎮 Random Winning Logic
+    safe_tiles = 25 - mines
+    win_chance = safe_tiles / 25
+
+    if random.random() <= win_chance:
+        profit = round(bet * (1 + (mines / 10)))
+        update_balance(ctx.author.id, profit)
+        await ctx.send(f"💣 **You Survived the Mines! 🎉 Earned +{profit} Points!**")
+    else:
+        remove_balance(ctx.author.id, bet)
+        await ctx.send(f"💣 **You Stepped on a Mine! 💀 Lost -{bet} Points!**")
+
+
+#dice
+
+@bot.command()
+async def dice(ctx, bet: int):
+    balance = get_balance(ctx.author.id)
+    if bet > balance:
+        return await ctx.send("❌ You don't have enough points!")
+
+    player_roll = random.randint(1, 6)
+    bot_roll = random.randint(1, 6)
+
+    if player_roll > bot_roll:
+        update_balance(ctx.author.id, bet)
+        await ctx.send(f"🎲 **You Rolled {player_roll} | Bot Rolled {bot_roll} - 🎉 You Won +{bet} Points!**")
+    elif player_roll < bot_roll:
+        remove_balance(ctx.author.id, bet)
+        await ctx.send(f"🎲 **You Rolled {player_roll} | Bot Rolled {bot_roll} - 💀 You Lost -{bet} Points!**")
+    else:
+        await ctx.send(f"🎲 **It's a Tie! Both Rolled {player_roll} 🎮**")
+
+#cf
+
+@bot.command()
+async def cf(ctx, bet: int, side: str):
+    balance = get_balance(ctx.author.id)
+    if bet > balance:
+        return await ctx.send("❌ You don't have enough points!")
+
+    # ✅ Normalize Input for Head/Tail
+    side = side.lower()
+    if side in ['h', 'head', 'heads']:
+        side = 'heads'
+    elif side in ['t', 'tail', 'tails']:
+        side = 'tails'
+    else:
+        return await ctx.send("❌ Invalid side! Choose `heads` or `tails`.")
+
+    # 🎯 Random Coinflip
+    result = random.choice(['heads', 'tails'])
+
+    # 🎉 Check Win or Lose
+    if side == result:
+        update_balance(ctx.author.id, bet)
+        await ctx.send(f"🪙 Coinflip Result: `{result}`\n✅ You Won! +{bet} Points")
+    else:
+        remove_balance(ctx.author.id, bet)
+        await ctx.send(f"🪙 Coinflip Result: `{result}`\n❌ You Lost! -{bet} Points")
+
+
 
 # ➖ `.withdraw <amount>` Command
 @bot.command()
