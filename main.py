@@ -151,11 +151,20 @@ ADMIN_IDS = [1101467683083530331, 1106931469928124498]  # ✅ Your Admin IDs Her
 
 # ✅ Fixed .setbalance Command
 # ✅ .addpoints Command (Only Admins)
+
 @bot.command()
 async def removepoints(ctx, member: discord.Member, amount: int):
     if ctx.author.id in ADMIN_IDS:
         remove_balance(member.id, amount)
         await ctx.send(f"✅ Removed {amount} Points from {member.mention}!")
+    else:
+        await ctx.send("❌ Only bot admins can use this command!")
+
+@bot.command()
+async def addpoints(ctx, member: discord.Member, amount: int):
+    if ctx.author.id in ADMIN_IDS:
+        update_balance(member.id, amount)
+        await ctx.send(f"✅ Added {amount} Points to {member.mention}!")
     else:
         await ctx.send("❌ Only bot admins can use this command!")
 
